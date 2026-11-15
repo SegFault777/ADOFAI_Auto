@@ -30,6 +30,9 @@ namespace ADOFAI_Auto.Core
             result.AppendLine();
 
             result.AppendLine("# =============== Data ===============");
+            result.AppendLine("Version=2");
+            result.AppendLine($"Created={DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            result.AppendLine($"Count={keyList.Count}");
             result.AppendLine($"FirstOffset={keyList.InputOffset}");
             result.AppendLine($"GlobalOffset={keyList.GlobalOffset}");
 
@@ -42,6 +45,9 @@ namespace ADOFAI_Auto.Core
 
             try
             {
+                string dir = Path.GetDirectoryName(Path.GetFullPath(path));
+                if (!string.IsNullOrEmpty(dir))
+                    Directory.CreateDirectory(dir);
                 File.WriteAllText(path, result.ToString(), Encoding.UTF8);
             }
             catch
@@ -82,8 +88,8 @@ namespace ADOFAI_Auto.Core
 
                 if (contents[i].Contains("="))
                 {
-                    var offset = contents[i].Split('=');
-                    if (offset.Length == 2 && int.TryParse(offset[1], out int offsetData))
+                    var offset = contents[i].Split(new[] { '=' }, 2);
+                    if (offset.Length == 2 && int.TryParse(offset[1].Trim(), out int offsetData))
                     {
                         switch (offset[0])
                         {
