@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -43,6 +43,8 @@ namespace ADOFAI_Auto.Core
         /// <summary>UI에 표시할 현재 상태 문구.</summary>
         public static string Status { get; private set; } = "게임 대기 중...";
         public static string FrameSource { get; private set; } = "-";
+        /// <summary>연결된 게임 exe의 제품 버전 (표시용).</summary>
+        public static string GameVersion { get; private set; } = "-";
         public static event Action<string> StatusChanged;
 
         public static bool IsAttached => Mem != null && Mem.IsAlive;
@@ -107,9 +109,10 @@ namespace ADOFAI_Auto.Core
                 Target = process;
                 Mem = mem;
                 BuildKey = FrameCounterCache.BuildKey(process);
+                GameVersion = FrameCounterCache.GameVersion(process);
                 FrameAddress = PauseAddress = InputOffsetAddress = 0;
             }
-            SetStatus("게임에 연결됨. 프레임 카운터 확인 중...");
+            SetStatus($"게임에 연결됨 (버전 {GameVersion}). 프레임 카운터 확인 중...");
             return true;
         }
 
@@ -122,6 +125,7 @@ namespace ADOFAI_Auto.Core
             FrameAddress = PauseAddress = InputOffsetAddress = 0;
             Interlocked.Exchange(ref PreloadFrame, 0);
             FrameSource = "-";
+            GameVersion = "-";
         }
 
         // ───────────────────────── 주소 결정 ─────────────────────────

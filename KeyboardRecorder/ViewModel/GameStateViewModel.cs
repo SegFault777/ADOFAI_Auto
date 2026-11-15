@@ -30,6 +30,7 @@ namespace ADOFAI_Auto.ViewModel
                 PauseText = MemoryReader.IsPauseAvailable ? (IsGamePause ? "예" : "아니오") : "알 수 없음";
                 OffsetText = MemoryReader.IsInputOffsetAvailable ? MemoryReader.GetInputOffset().ToString() : "사용 안 함";
                 FrameSourceText = MemoryReader.IsReady ? MemoryReader.FrameSource : "-";
+                GameVersionText = MemoryReader.GameVersion;
                 RecordName = KeyboardContorller.GetInstence().CurrentRecordName;
                 //beforeFrame = GameFrame;
                 GameFrame = MemoryReader.GetFrame();
@@ -129,6 +130,13 @@ namespace ADOFAI_Auto.ViewModel
         {
             get => _FrameSourceText;
             set { _FrameSourceText = value; OnPropertyChanged("FrameSourceText"); }
+        }
+
+        private string _GameVersionText = "-";
+        public string GameVersionText
+        {
+            get => _GameVersionText;
+            set { _GameVersionText = value; OnPropertyChanged("GameVersionText"); }
         }
 
         private string _RecordName = "(없음)";

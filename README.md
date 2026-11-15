@@ -45,6 +45,11 @@ The "A Dance of Fire and Ice" Auto Player (Frame sync Keyboard Recorder)
 * 일시정지 여부 / 입력 오프셋은 자동 탐색이 불가능하므로 `adofai_auto.ini` 에 포인터를 직접 적었을 때만 활성화됩니다. (없어도 녹화/재생은 정상 동작)
 * 앱은 **x64** 로 빌드되며, 게임에 접근하지 못하면 관리자 권한으로 실행하세요.
 
+### 최신 ADOFAI 구조 메모 (2026년 11월 기준 조사)
+* 게임은 Mono 기반 Unity 게임이라 로직이 `<게임>_Data/Managed/Assembly-CSharp.dll` 에 들어 있습니다. 업데이트 때 exe는 그대로인 경우가 많아서, 캐시 키를 exe + `UnityPlayer.dll` + `Assembly-CSharp.dll` 의 크기/수정 시각으로 잡았습니다. (게임 버전은 UI에 표시)
+* 모드 생태계는 Unity Mod Manager / BepInEx + Harmony 이고, 현재 PC 빌드는 3.4.x 대로 보입니다. 이 프로젝트는 모드 주입 없이 외부에서 메모리를 읽으므로 게임 내부 클래스명이 바뀌어도 영향이 없습니다.
+* 설정에 **Asynchronous Input** 이 있습니다. 프레임 동기 방식과 맞지 않으면 이 옵션을 끄고 녹화/재생해 보세요. (직접 검증하지는 못했습니다)
+
 ### 강화된 기능
 * 재생 정확도: 목표 프레임을 **절대값**으로 계산(오차 누적 없음) + 목표 직전 바쁜 대기로 프레임이 바뀌는 즉시 입력
 * 입력 방식: SendInput(가상 키 + 스캔 코드). 재생 키는 `adofai_auto.ini` 의 `PlayKey` 로 변경
@@ -62,6 +67,9 @@ F3 / F4 | 이전 / 다음 파일 불러오기
 F1 / F2 | 전체 프레임 오프셋 -1 / +1 (모든 타일 간격에 적용)
 F5 | 프레임 카운터 재탐색
 Delete | 녹화 비우기
+
+### 빌드 (GitHub Actions)
+`.github/workflows/build.yml` 이 push / PR 때 Windows에서 Release/x64 로 빌드해 `ADOFAI_Auto.zip` 아티팩트로 올리고, `v1.0.0` 같은 태그를 push 하면 릴리스에도 첨부합니다.
 
 ### 설정 (`adofai_auto.ini`, 첫 실행 시 자동 생성)
 `ProcessName`, `WindowTitleHint`, `PlayKey`, 그리고 선택 사항인 `FramePointer` / `PausePointer` / `InputOffsetPointer`
