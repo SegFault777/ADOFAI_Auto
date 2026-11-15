@@ -18,6 +18,12 @@
         <TextBlock FontWeight="Bold" Text="상태" />
         <TextBlock Text="{Binding CurrentState}" Margin="0,0,0,8" />
 
+        <TextBlock FontWeight="Bold" Text="모드" />
+        <TextBlock Text="{Binding ModeText}" Margin="0,0,0,8" />
+
+        <TextBlock FontWeight="Bold" Text="오토플레이 레벨" />
+        <TextBlock Text="{Binding LevelText}" TextWrapping="Wrap" Margin="0,0,0,8" />
+
         <TextBlock FontWeight="Bold" Text="게임 연결" />
         <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" Margin="0,0,0,8" />
 

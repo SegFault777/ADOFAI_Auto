@@ -31,6 +31,8 @@ namespace ADOFAI_Auto.ViewModel
                 OffsetText = MemoryReader.IsInputOffsetAvailable ? MemoryReader.GetInputOffset().ToString() : "사용 안 함";
                 FrameSourceText = MemoryReader.IsReady ? MemoryReader.FrameSource : "-";
                 GameVersionText = MemoryReader.GameVersion;
+                ModeText = KeyboardContorller.GetInstence().ModeText;
+                LevelText = KeyboardContorller.GetInstence().LevelSummary;
                 RecordName = KeyboardContorller.GetInstence().CurrentRecordName;
                 //beforeFrame = GameFrame;
                 GameFrame = MemoryReader.GetFrame();
@@ -132,6 +134,20 @@ namespace ADOFAI_Auto.ViewModel
             set { _FrameSourceText = value; OnPropertyChanged("FrameSourceText"); }
         }
 
+        private string _ModeText = "녹화/재생";
+        public string ModeText
+        {
+            get => _ModeText;
+            set { _ModeText = value; OnPropertyChanged("ModeText"); }
+        }
+
+        private string _LevelText = "";
+        public string LevelText
+        {
+            get => _LevelText;
+            set { _LevelText = value; OnPropertyChanged("LevelText"); }
+        }
+
         private string _GameVersionText = "-";
         public string GameVersionText
         {
@@ -154,6 +170,10 @@ namespace ADOFAI_Auto.ViewModel
             "F3/F4  이전/다음 파일 불러오기\n" +
             "F1/F2  전체 프레임 오프셋 -1/+1\n" +
             "F5  프레임 카운터 재탐색\n" +
-            "Delete  녹화 비우기";
+            "Delete  녹화 비우기\n" +
+            "F6  모드 전환 (녹화/재생 ↔ 오토플레이)\n" +
+            "L  (오토플레이) .adofai 레벨 선택\n" +
+            "F1/F2  (오토플레이) 타이밍 보정 -5/+5ms\n" +
+            "F7/F8  (오토플레이) 속도 배율 -0.1/+0.1";
     }
 }

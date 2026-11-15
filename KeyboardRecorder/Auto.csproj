@@ -83,6 +83,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Core\AutoPlay\AdofaiLevel.cs" />
+    <Compile Include="Core\AutoPlay\AutoPlayer.cs" />
+    <Compile Include="Core\AutoPlay\AutoPlayPlanner.cs" />
+    <Compile Include="Core\AutoPlay\MiniJson.cs" />
     <Compile Include="Core\AppConfig.cs" />
     <Compile Include="Core\Memory\FrameCounterCache.cs" />
     <Compile Include="Core\Memory\FrameCounterFinder.cs" />

@@ -50,6 +50,22 @@ The "A Dance of Fire and Ice" Auto Player (Frame sync Keyboard Recorder)
 * 모드 생태계는 Unity Mod Manager / BepInEx + Harmony 이고, 현재 PC 빌드는 3.4.x 대로 보입니다. 이 프로젝트는 모드 주입 없이 외부에서 메모리를 읽으므로 게임 내부 클래스명이 바뀌어도 영향이 없습니다.
 * 설정에 **Asynchronous Input** 이 있습니다. 프레임 동기 방식과 맞지 않으면 이 옵션을 끄고 녹화/재생해 보세요. (직접 검증하지는 못했습니다)
 
+### 오토플레이 모드 (녹화 없이 레벨 파일로 자동 연주)
+녹화한 입력 대신 **.adofai 레벨 파일**을 읽어 "언제 키를 눌러야 하는지"를 계산하고 그대로 입력합니다. 기존 구조(전역 키 후킹 → 컨트롤러 → 플레이어 → SendInput)는 그대로이고, 플레이어 자리에 `AutoPlayer` 가 추가된 형태입니다.
+
+1. `F6` 으로 오토플레이 모드 전환 (상태창의 "모드"에서 확인)
+2. `L` 로 연주할 `.adofai` 파일 선택 (또는 `adofai_auto.ini` 의 `LevelPath`)
+3. 게임에서 해당 레벨의 시작 화면을 띄우고 `E` → 시작 키가 곧 레벨 시작 입력이 되고, 계산된 시각표대로 키를 누릅니다. 재생 중 `E` 로 중단
+4. 판정이 일정하게 빠르거나 늦으면 `F1`/`F2` 로 ±5ms 보정, 스피드 트라이얼이면 `F7`/`F8` 로 속도 배율 맞추기
+
+계산 규칙: 1박 = 180° 회전, 시간 = 각도/180 × 60/BPM. `SetSpeed`(BPM/배율), `Twirl`(방향 반전), `Pause`, 레벨의 `pitch`, 시작 전 카운트다운(`countdownTicks`)을 반영합니다.
+
+**제한 사항 (정직하게)**
+* 미드스핀(999), 홀드 타일, 3개 이상 행성 레벨은 아직 지원하지 않고, 불러올 때 이유를 알려 줍니다.
+* 카운트다운 길이와 게임의 입력 오프셋은 환경마다 다르므로, 처음에는 보정(`F1`/`F2`)으로 맞춰야 할 수 있습니다. 시간 계산은 손계산 기준 테스트로만 검증했고 실제 게임과의 동기는 직접 확인이 필요합니다.
+* 게임 안에는 원래 자동 플레이(Otto)가 있고, 모드 방식(Unity Mod Manager/BepInEx + Harmony)으로 `RDC.auto` 를 켜는 도구들도 있습니다. 이 모드는 게임에 아무것도 주입하지 않는 **외부 입력 방식**입니다.
+* 혼자 즐기는 용도로만 사용하고, 랭킹/대회 기록 제출에는 쓰지 마세요.
+
 ### 강화된 기능
 * 재생 정확도: 목표 프레임을 **절대값**으로 계산(오차 누적 없음) + 목표 직전 바쁜 대기로 프레임이 바뀌는 즉시 입력
 * 입력 방식: SendInput(가상 키 + 스캔 코드). 재생 키는 `adofai_auto.ini` 의 `PlayKey` 로 변경
@@ -66,13 +82,17 @@ W | 선택된 파일 불러오기 (없으면 가장 최근 파일)
 F3 / F4 | 이전 / 다음 파일 불러오기
 F1 / F2 | 전체 프레임 오프셋 -1 / +1 (모든 타일 간격에 적용)
 F5 | 프레임 카운터 재탐색
+F6 | 모드 전환 (녹화/재생 ↔ 오토플레이)
+L | (오토플레이) .adofai 레벨 선택
+F7 / F8 | (오토플레이) 속도 배율 -0.1 / +0.1
+F1 / F2 | (오토플레이 모드에서는) 타이밍 보정 -5 / +5ms
 Delete | 녹화 비우기
 
 ### 빌드 (GitHub Actions)
 `.github/workflows/build.yml` 이 push / PR 때 Windows에서 Release/x64 로 빌드해 `ADOFAI_Auto.zip` 아티팩트로 올리고, `v1.0.0` 같은 태그를 push 하면 릴리스에도 첨부합니다.
 
 ### 설정 (`adofai_auto.ini`, 첫 실행 시 자동 생성)
-`ProcessName`, `WindowTitleHint`, `PlayKey`, 그리고 선택 사항인 `FramePointer` / `PausePointer` / `InputOffsetPointer`
+`ProcessName`, `WindowTitleHint`, `PlayKey`, 오토플레이용 `LevelPath` / `SpeedMultiplier` / `AutoOffsetMs`, 그리고 선택 사항인 `FramePointer` / `PausePointer` / `InputOffsetPointer`
 (형식 `모듈+오프셋:체인`, 예: `UnityPlayer.dll+0x017EEDD0:0x3D8,0x0,0x578,0xE30`)
 
 ### 종속성<br/>

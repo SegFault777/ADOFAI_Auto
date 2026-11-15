@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using ADOFAI_Auto.Core.AutoPlay;
 using ADOFAI_Auto.Core.Model;
 
 using NeatInput.Windows;
@@ -38,11 +39,13 @@ namespace ADOFAI_Auto.Core
             {
                 Recorder.PropertyChanged += value;
                 Player.PropertyChanged += value;
+                AutoPlayer.PropertyChanged += value;
             }
             remove
             {
                 Recorder.PropertyChanged -= value;
                 Player.PropertyChanged -= value;
+                AutoPlayer.PropertyChanged -= value;
             }
         }
         public event EventHandler<KeyboardLogInfo> KeyEvent
@@ -51,11 +54,13 @@ namespace ADOFAI_Auto.Core
             {
                 Recorder.KeyEvent += value;
                 Player.KeyEvent += value;
+                AutoPlayer.KeyEvent += value;
             }
             remove
             {
                 Recorder.KeyEvent -= value;
                 Player.KeyEvent -= value;
+                AutoPlayer.KeyEvent -= value;
             }
         }
 
@@ -65,7 +70,27 @@ namespace ADOFAI_Auto.Core
         public KeyboardPlayer Player { get; } = new KeyboardPlayer();
 
         public bool IsRecording => Recorder.IsRecording;
-        public bool IsPlaying => Player.IsPlaying;
+        public AutoPlayer AutoPlayer { get; } = new AutoPlayer();
+        public bool IsPlaying => Player.IsPlaying || AutoPlayer.IsPlaying;
+
+        // ───────────── 오토플레이 모드 (녹화 없이 레벨 파일로 자동 연주) ─────────────
+        /// <summary>true 면 E 키가 녹화 재생 대신 레벨 파일 기반 오토플레이를 시작한다 (F6로 전환).</summary>
+        public bool AutoMode { get; private set; }
+        public AdofaiLevel Level { get; private set; }
+        public AutoPlayPlan Plan { get; private set; }
+        public double SpeedMultiplier { get; private set; } = AppConfig.SpeedMultiplier;
+        public int AutoOffsetMs { get; private set; } = AppConfig.AutoOffsetMs;
+
+        public string ModeText => AutoMode ? "오토플레이 (레벨 파일)" : "녹화/재생";
+        public string LevelSummary
+        {
+            get
+            {
+                if (Level == null) return "(레벨 없음 - L 키로 .adofai 선택)";
+                if (Plan == null || !Plan.IsPlayable) return $"{Level.Name}: {Plan?.Unsupported ?? "계산 실패"}";
+                return $"{Level.Name} / 타일 {Plan.TileCount}개 / {Plan.Duration:F1}초 / 속도 {SpeedMultiplier:0.0#}x / 보정 {AutoOffsetMs:+#;-#;0}ms";
+            }
+        }
 
         /// <summary>UI에 보여 줄 짧은 안내 메시지 (저장/불러오기 결과, 오프셋 변경 등).</summary>
         public event Action<string> Notice;
@@ -85,7 +110,10 @@ namespace ADOFAI_Auto.Core
             if (IsPlaying)
             {
                 if (e.Key == Keys.E)
+                {
                     Player.Stop();
+                    AutoPlayer.Stop();
+                }
                 return;
             }
             if (IsRecording)
@@ -101,7 +129,10 @@ namespace ADOFAI_Auto.Core
             if (e.Key == Keys.R)
                 Recorder.StartRecord(KeyboardEventLogger);
             else if (e.Key == Keys.E)
-                Player.Play(Recorder.GetRecord());
+            {
+                if (AutoMode) StartAuto();
+                else Player.Play(Recorder.GetRecord());
+            }
             else if (e.Key == Keys.Delete)
             {
                 Recorder.RecordClear();
@@ -112,9 +143,21 @@ namespace ADOFAI_Auto.Core
             else if (e.Key == Keys.W)
                 LoadSelected();
             else if (key == "F1")
-                AdjustGlobalOffset(-1);
+            {
+                if (AutoMode) AdjustAutoOffset(-5); else AdjustGlobalOffset(-1);
+            }
             else if (key == "F2")
-                AdjustGlobalOffset(1);
+            {
+                if (AutoMode) AdjustAutoOffset(5); else AdjustGlobalOffset(1);
+            }
+            else if (key == "F6")
+                ToggleMode();
+            else if (key == "F7")
+                AdjustSpeed(-0.1);
+            else if (key == "F8")
+                AdjustSpeed(0.1);
+            else if (key == "L")
+                PickLevel();
             else if (key == "F3")
                 SelectRecord(-1);
             else if (key == "F4")
@@ -164,6 +207,85 @@ namespace ADOFAI_Auto.Core
         {
             Recorder.GlobalOffset += delta;
             Say($"전체 프레임 오프셋: {Recorder.GlobalOffset:+#;-#;0} (타일마다 적용)");
+        }
+
+        // ───────────── 오토플레이 동작 ─────────────
+        private void ToggleMode()
+        {
+            AutoMode = !AutoMode;
+            if (AutoMode && Level == null && !string.IsNullOrWhiteSpace(AppConfig.LevelPath))
+                LoadLevel(AppConfig.LevelPath);
+            Say(AutoMode
+                ? "오토플레이 모드: L=레벨 선택, E=시작, F1/F2=±5ms 보정, F7/F8=속도 ∓0.1"
+                : "녹화/재생 모드로 전환했습니다.");
+        }
+
+        private void PickLevel()
+        {
+            if (!AutoMode)
+            {
+                Say("F6 으로 오토플레이 모드를 켠 뒤 L 키를 누르세요.");
+                return;
+            }
+
+            string path = null;
+            var app = System.Windows.Application.Current;
+            if (app == null) return;
+            app.Dispatcher.Invoke(() =>
+            {
+                var dialog = new Microsoft.Win32.OpenFileDialog
+                {
+                    Title = "오토플레이할 레벨 선택",
+                    Filter = "ADOFAI 레벨 (*.adofai)|*.adofai|모든 파일 (*.*)|*.*"
+                };
+                if (dialog.ShowDialog() == true)
+                    path = dialog.FileName;
+            });
+            if (path != null)
+                LoadLevel(path);
+        }
+
+        private void LoadLevel(string path)
+        {
+            try
+            {
+                Level = AdofaiLevel.Load(path);
+                Plan = AutoPlayPlanner.Plan(Level);
+                if (!Plan.IsPlayable)
+                    Say("불러왔지만 재생할 수 없습니다: " + Plan.Unsupported);
+                else
+                    Say($"레벨 불러오기 완료: {Level.Name} ({Plan.TileCount}타일)" +
+                        (Plan.Warnings.Count > 0 ? " - 주의: " + string.Join(" ", Plan.Warnings) : ""));
+            }
+            catch (Exception ex)
+            {
+                Level = null;
+                Plan = null;
+                Say("레벨 불러오기 실패: " + ex.Message);
+            }
+        }
+
+        private void StartAuto()
+        {
+            if (Plan == null || !Plan.IsPlayable)
+            {
+                Say("재생할 수 있는 레벨이 없습니다. L 키로 .adofai 파일을 먼저 선택하세요.");
+                return;
+            }
+            AutoPlayer.Play(Plan, SpeedMultiplier, AutoOffsetMs);
+        }
+
+        private void AdjustAutoOffset(int deltaMs)
+        {
+            AutoOffsetMs += deltaMs;
+            Say($"오토플레이 보정: {AutoOffsetMs:+#;-#;0}ms (+는 늦게, -는 빠르게)");
+        }
+
+        private void AdjustSpeed(double delta)
+        {
+            if (!AutoMode) return;
+            SpeedMultiplier = Math.Max(0.1, Math.Round(SpeedMultiplier + delta, 2));
+            Say($"오토플레이 속도 배율: {SpeedMultiplier:0.0#}x (게임의 속도 배율과 같아야 합니다)");
         }
     }
 }
